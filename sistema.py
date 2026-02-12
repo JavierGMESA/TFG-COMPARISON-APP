@@ -105,7 +105,13 @@ def BusRd(op: dict, c_n: int, proto: str) -> tuple[int, int, int]:
     
     return cicles_used, data, state
     
+def BusWB(op: dict, c_n: int, proto: str) -> tuple[int, int]:
+    cicles_used = 45
+    state = 2
 
+    ram[op["dir"]] = cache_data[c_n] & 0xf
+
+    return cicles_used, state
 
 def process_instruction(op: dict, c_n: int, proto: str) -> tuple[bool, int, bool]:
     cache_success = False
@@ -130,6 +136,16 @@ def process_instruction(op: dict, c_n: int, proto: str) -> tuple[bool, int, bool
                 cicles_used, state = BusWB(op, c_n, proto)
                 states[c_n] = state
                 extra_op = True
+            else:
+                if((cache_data[(c_n - 1) % 3] == cache_data[c_n] and states[(c_n - 1) % 3] == 4) or (cache_data[(c_n + 1) % 3] == cache_data[c_n] and states[(c_n + 1) % 3] == 4)):
+                    cicles_used, data, state = BusRd(op, c_n, proto)
+                    cache_data[c_n] = (op["dir"] << 4) | data
+                    states[c_n] = state
+                else:
+                    cicles_used, state = BusWB(op, c_n, proto)
+                    states[c_n] = state
+                    extra_op = True
+    #else:
 
 
     
