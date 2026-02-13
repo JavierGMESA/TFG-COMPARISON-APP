@@ -1,3 +1,5 @@
+import random
+
 cache_data: list
 cache_data = [0x00, 0x00, 0x00]
 states: list
@@ -44,6 +46,7 @@ def BusRd(op: dict, c_n: int, proto: str) -> tuple[int, int, int]:
                 cicles_used = 48
                 state = 2
                 states[oc1_n] = 2           #Lo ponemos en estado Shared a consecuencia del WB
+                ram[op["dir"]] = data       #Actualizamos la RAM debido al WB
             elif(proto == "moesi"):
                 cicles_used = 11 + op["lat1"]
                 state = 2
@@ -63,6 +66,7 @@ def BusRd(op: dict, c_n: int, proto: str) -> tuple[int, int, int]:
                 cicles_used = 48
                 state = 2
                 states[oc2_n] = 2
+                ram[op["dir"]] = data
             elif(proto == "moesi"):
                 cicles_used = 11 + op["lat2"]
                 state = 2
@@ -104,6 +108,93 @@ def BusRd(op: dict, c_n: int, proto: str) -> tuple[int, int, int]:
                 raise ValueError("proto es mess*i y hay dos caches compartiendo un bloque dirty pero solo una está en Modified o Shared*")        
     
     return cicles_used, data, state
+
+def BusRdX(op: dict, c_n: int, proto: str) -> tuple[int, int]:
+    cicles_used = 0
+    state = 3
+
+    oc1_n = 0
+    oc2_n = 0
+    oc1_has = False
+    oc2_has = False
+    oc1_sta = 0
+    oc2_sta = 0
+
+    if((c_n - 1) % 3 < (c_n + 1) % 3):
+        oc1_n = (c_n - 1) % 3
+        oc2_n = (c_n + 1) % 3
+    else:
+        oc2_n = (c_n - 1) % 3
+        oc1_n = (c_n + 1) % 3
+    
+    oc1_has = op["dir"] == (cache_data[oc1_n] >> 4) and states[oc1_n] > 0
+    oc2_has = op["dir"] == (cache_data[oc2_n] >> 4) and states[oc2_n] > 0
+    oc1_sta = states[oc1_n]
+    oc2_sta = states[oc2_n]
+
+    if(not oc1_has and not oc2_has):
+        cicles_used = 48
+    elif(not oc2_has):
+        if(oc1_sta < 3):
+            cicles_used = 11 + op["lat1"]
+        else:
+            if(proto == "msi" or proto == "mesi"):
+                cicles_used = 48
+                ram[op["dir"]] = cache_data[oc1_n] & 0xf
+            else:
+                cicles_used = 11 + op["lat1"]
+            states[oc1_n] = 0
+    elif(not oc1_has):
+        if(oc2_sta < 3):
+            cicles_used = 11 + op["lat2"]
+        else:
+            if(proto == "msi" or proto == "mesi"):
+                cicles_used = 48
+                ram[op["dir"]] = cache_data[oc2_n] & 0xf
+            else:
+                cicles_used = 11 + op["lat2"]
+        states[oc2_n] = 0
+    else:
+        if(oc1_sta < 3 and oc2_sta < 3):
+            cicles_used = 11 + min(op["lat1"], op["lat2"])  
+        elif(oc1_sta >= 3 and oc2_sta >= 3):
+            if(proto == "msi" or proto == "mesi"):
+                raise ValueError("proto es msi o mesi pero hay dos caches compartiendo un bloque dirty")
+            elif(proto == "moesi"):
+                raise ValueError("proto es moesi pero hay dos caches con un mismo bloque en estado Modified u Owner")
+            else:
+                cicles_used = 11 + min(op["lat1"], op["lat2"])
+        elif(oc1_sta >= 3):
+            if(proto == "msi" or proto == "mesi"):
+                raise ValueError("proto es msi o mesi pero hay dos caches compartiendo un bloque dirty")
+            elif(proto == "moesi"):
+                cicles_used = 11 + op["lat1"]
+            else:
+                raise ValueError("proto es mess*i y hay dos caches compartiendo un bloque dirty pero solo una está en Modified o Shared*")
+        else:
+            if(proto == "msi" or proto == "mesi"):
+                raise ValueError("proto es msi o mesi pero hay dos caches compartiendo un bloque dirty")
+            elif(proto == "moesi"):
+                cicles_used = 11 + op["lat2"]
+            else:
+                raise ValueError("proto es mess*i y hay dos caches compartiendo un bloque dirty pero solo una está en Modified o Shared*")  
+        states[oc1_n] = states[oc2_n] = 0
+
+    return cicles_used, state
+
+def BusUpgr(op: dict, c_n: int, proto: str) -> tuple[int, int]:
+    cicles_used = 7
+    state = 3
+
+    oc1_has = op["dir"] == (cache_data[(c_n - 1) % 3] >> 4) and states[(c_n - 1) % 3] > 0
+    oc2_has = op["dir"] == (cache_data[(c_n + 1) % 3] >> 4) and states[(c_n + 1) % 3] > 0
+
+    if(oc1_has):
+        states[(c_n - 1) % 3] = 0
+    if(oc2_has):
+        states[(c_n + 1) % 3] = 0
+
+    return cicles_used, state
     
 def BusWB(op: dict, c_n: int, proto: str) -> tuple[int, int]:
     cicles_used = 45
@@ -145,8 +236,56 @@ def process_instruction(op: dict, c_n: int, proto: str) -> tuple[bool, int, bool
                     cicles_used, state = BusWB(op, c_n, proto)
                     states[c_n] = state
                     extra_op = True
-    #else:
+    else:
+        data = (random.randint(0, 15) & 0xf)
+        if(op["dir"] == (cache_data[c_n] >> 4)):
+            if(states[c_n] == 0):
+                cicles_used, state = BusRdX(op, c_n, proto)
+                cache_data[c_n] = (op["dir"] << 4) | data
+                states[c_n] = state
+            elif(states[c_n] == 1 or states[c_n] == 3):
+                cicles_used = 3
+                cache_data[c_n] = (op["dir"] << 4) | data
+                states[c_n] = 3
+            else:
+                cicles_used, state = BusUpgr(op, c_n, proto)
+                cache_data[c_n] = (op["dir"] << 4) | data
+                states[c_n] = state
+        else:
+            if(states[c_n] < 3):
+                cicles_used, state = BusRdX(op, c_n, proto)
+                cache_data[c_n] = (op["dir"] << 4) | data
+                states[c_n] = state
+            elif(states[c_n] == 3):
+                cicles_used, state = BusWB(op, c_n, proto)
+                states[c_n] = state
+                extra_op = True
+            else:
+                if((cache_data[(c_n - 1) % 3] == cache_data[c_n] and states[(c_n - 1) % 3] == 4) or (cache_data[(c_n + 1) % 3] == cache_data[c_n] and states[(c_n + 1) % 3] == 4)):
+                    cicles_used, state = BusRdX(op, c_n, proto)
+                    cache_data[c_n] = (op["dir"] << 4) | data
+                    states[c_n] = state
+                else:
+                    cicles_used, state = BusWB(op, c_n, proto)
+                    states[c_n] = state
+                    extra_op = True
 
-
+    #DEBUG
+    states_str: list
+    states_str = ["", "", ""]
+    for i in range(3):
+        if(states[i] == 0):
+            states_str[i] = "I"
+        elif(states[i] == 1):
+            states_str[i] = "E"
+        elif(states[i] == 2):
+            states_str[i] = "S"
+        elif(states[i] == 3):
+            states_str[i] = "M"
+        elif(states[i] == 4 and proto == "moesi"):
+            states_str[i] = "O"
+        else:
+            states_str[i] = "S*"
+    print(f"0x{cache_data[0]:02x} {states_str[0]} | 0x{cache_data[1]:02x} {states_str[1]} | 0x{cache_data[2]:02x} {states_str[2]} | {hex(ram[1])} {hex(ram[0])}")
     
     return cache_success, cicles_used, extra_op

@@ -1,7 +1,5 @@
 import random
 
-N_INSTR = 5001
-
 def read_instructions() -> list:
     instr: list
     instr = []
@@ -15,7 +13,7 @@ def read_instructions() -> list:
     file.close()
     return instr
 
-def generate_instructions():
+def generate_instructions(N_INSTR: int):
     file = open("instrucciones.txt", "w")
     
     for i in range(N_INSTR):

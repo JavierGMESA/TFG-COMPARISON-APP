@@ -1,5 +1,5 @@
 1. Posibilidad de generar instrucciones en un fichero "instructions.txt" y regenerarlas si lo desea el usuario.
-2. El nº de instrucciones a generar serán unas 5000
+2. El nº de instrucciones a generar serán unas 5001
 3. Las instrucciones serán leer un bloque o escribir un bloque.
 3.1. Si al intentar leer un bloque de cache ocurre un fallo de cache entonces se realizará un BusRd
 3.2. Si al intentar escribir en un bloque de cache ocurre un fallo de cache entonces se realizará un BusRdX
