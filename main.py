@@ -39,9 +39,9 @@ if __name__ == "__main__":
                 c_instr[i % 3].pop(0)
             else:
                 print("Ha habido WB")   #DEBUG
+            print()
             
         i += 1
-        print()
 
     print(f"Utilizando el protocolo {PROTO} se han utilizado {cicles_used} ciclos para la ejecucion de {N_INSTR} instrucciones")
     print(f"Han habido {total_success} aciertos de caché y {total_fail} fallos de caché")
