@@ -6,6 +6,13 @@ states: list
 states = [0, 0, 0]
 ram = [0xb, 0x4]
 
+def restart():
+    for i in range(3):
+        cache_data[i] = 0x00
+        states[i] = 0
+    ram[0] = 0xb
+    ram[1] = 0x4
+
 def BusRd(op: dict, c_n: int, proto: str) -> tuple[int, int, int]:
     cicles_used = 0
 
@@ -288,6 +295,6 @@ def process_instruction(op: dict, c_n: int, proto: str) -> tuple[bool, int, bool
             states_str[i] = "O"
         else:
             states_str[i] = "S*"
-    print(f"0x{cache_data[0]:02x} {states_str[0]} | 0x{cache_data[1]:02x} {states_str[1]} | 0x{cache_data[2]:02x} {states_str[2]} | {hex(ram[1])} {hex(ram[0])}")
+    #print(f"0x{cache_data[0]:02x} {states_str[0]} | 0x{cache_data[1]:02x} {states_str[1]} | 0x{cache_data[2]:02x} {states_str[2]} | {hex(ram[1])} {hex(ram[0])}")
     
     return cache_success, cicles_used, extra_op
