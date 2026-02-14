@@ -103,7 +103,7 @@ def BusRd(op: dict, c_n: int, proto: str) -> tuple[int, int, int]:
             elif(proto == "moesi"):
                 cicles_used = 11 + op["lat2"]
                 state = 2
-                states[oc1_n] = 4
+                states[oc2_n] = 4
             else:
                 raise ValueError("proto es mess*i y hay dos caches compartiendo un bloque dirty pero solo una está en Modified o Shared*")        
     
@@ -143,7 +143,7 @@ def BusRdX(op: dict, c_n: int, proto: str) -> tuple[int, int]:
                 ram[op["dir"]] = cache_data[oc1_n] & 0xf
             else:
                 cicles_used = 11 + op["lat1"]
-            states[oc1_n] = 0
+        states[oc1_n] = 0
     elif(not oc1_has):
         if(oc2_sta < 3):
             cicles_used = 11 + op["lat2"]
@@ -244,10 +244,12 @@ def process_instruction(op: dict, c_n: int, proto: str) -> tuple[bool, int, bool
                 cache_data[c_n] = (op["dir"] << 4) | data
                 states[c_n] = state
             elif(states[c_n] == 1 or states[c_n] == 3):
+                cache_success = True
                 cicles_used = 3
                 cache_data[c_n] = (op["dir"] << 4) | data
                 states[c_n] = 3
             else:
+                cache_success = True
                 cicles_used, state = BusUpgr(op, c_n, proto)
                 cache_data[c_n] = (op["dir"] << 4) | data
                 states[c_n] = state

@@ -1,8 +1,8 @@
 import ficheros
 import sistema
 
-N_INSTR = 8
-PROTO = "mess*i"
+N_INSTR = 18
+PROTO = "moesi"
 
 if __name__ == "__main__":
     c_instr: list
@@ -15,7 +15,13 @@ if __name__ == "__main__":
     total_fail = 0
     extra_op = False
 
-    #ficheros.generate_instructions(N_INSTR)
+    print("¿Desea generar nuevas instrucciones? (Y/N): ", end= "")
+    res = input()
+    while(res != 'Y' and res != 'y' and res != 'N' and res != 'n'):
+        res = input("Introduzca solo 'Y' ó 'N': ")
+    if(res == 'Y' or res == 'y'):
+        ficheros.generate_instructions(N_INSTR)
+    
     instr = ficheros.read_instructions()
     for i in range(len(instr)):
 
