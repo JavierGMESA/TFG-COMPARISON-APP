@@ -18,11 +18,14 @@ import sistema
 def run_generation():
     n_instr = int(entry_instr.get())
     ficheros.generate_instructions(n_instr)
+    label_instructions.config(text=f"Intrucciones generadas")
 
 def run_simulation_all():
 
     #n_instr = int(entry_instr.get())
-    #generate = var_generate.get()
+    counter = var_counter.get()
+
+    label_instructions.config(text=f"")
 
     #if generate:
     #    ficheros.generate_instructions(n_instr)
@@ -32,7 +35,7 @@ def run_simulation_all():
     resultados = {}
 
     for proto in protocolos:
-        cycles, success, fail = simulate(proto)
+        cycles, success, fail = simulate(proto, counter)
         resultados[proto] = (cycles, success, fail)
 
     mostrar_resultados(resultados)
@@ -49,9 +52,10 @@ def mostrar_resultados(resultados):
     label_results.config(text=texto)
 
 
-def simulate(PROTO):
+def simulate(PROTO: str, counter: bool):
 
     instr = ficheros.read_instructions()
+    c_instr: list
     c_instr = [[], [], []]
 
     for i in range(len(instr)):
@@ -64,7 +68,10 @@ def simulate(PROTO):
 
     while (len(c_instr[0]) > 0 or len(c_instr[1]) > 0 or len(c_instr[2]) > 0):
         if(len(c_instr[i % 3]) > 0):
-            success, cicles, extra_op = sistema.process_instruction(c_instr[i % 3][0], i % 3, PROTO)
+            if(counter):
+                success, cicles, extra_op = sistema.process_instruction(c_instr[i % 3][0], i % 3, PROTO)
+            else:
+                success, cicles, extra_op = sistema.process_instruction_no_counter(c_instr[i % 3][0], i % 3, PROTO)
             cicles_used += cicles
 
             if success:
@@ -79,7 +86,7 @@ def simulate(PROTO):
     
     sistema.restart()
 
-    #print(PROTO)            #DEBUG
+    print(PROTO)            #DEBUG
 
     return cicles_used, total_success, total_fail
 
@@ -96,14 +103,16 @@ entry_instr.insert(0, "5001")     #Valor por defecto 5001
 entry_instr.pack()
 
 tk.Button(root, text="Generar Instrucciones", command=run_generation).pack(pady=10)
+label_instructions = tk.Label(root, text="") #Texto para indicar que se han generado instrucciones
+label_instructions.pack()
 
 #tk.Label(root, text="Protocolo:").pack()
 #combo_proto = ttk.Combobox(root, values=["msi", "mesi", "moesi", "mess*i"])
 #combo_proto.current(2)
 #combo_proto.pack()
 
-#var_generate = tk.BooleanVar()
-#tk.Checkbutton(root, text="Generar nuevas instrucciones", variable=var_generate).pack()
+var_counter = tk.BooleanVar()
+tk.Checkbutton(root, text="Añadir contadores en MESS*I", variable=var_counter).pack()
 
 tk.Button(root, text="Ejecutar simulación", command=run_simulation_all).pack(pady=10)
 

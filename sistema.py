@@ -211,6 +211,20 @@ def BusWB(op: dict, c_n: int, proto: str) -> tuple[int, int]:
 
     return cicles_used, state
 
+def BusWB_no_counter(op: dict, c_n: int, proto: str) -> tuple[int, int]:
+    cicles_used = 45
+    state = 2
+
+    ram[op["dir"]] = cache_data[c_n] & 0xf
+
+    if(proto == "mess*i"):
+        if ((cache_data[c_n] >> 4) == (cache_data[(c_n - 1) % 3] >> 4) and states[(c_n - 1) % 3] == 4):
+            states[(c_n - 1) % 3] = 2
+        if ((cache_data[c_n] >> 4) == (cache_data[(c_n + 1) % 3] >> 4) and states[(c_n + 1) % 3] == 4):
+            states[(c_n + 1) % 3] = 2
+
+    return cicles_used, state
+
 def process_instruction(op: dict, c_n: int, proto: str) -> tuple[bool, int, bool]:
     cache_success = False
     cicles_used = 0
@@ -295,6 +309,90 @@ def process_instruction(op: dict, c_n: int, proto: str) -> tuple[bool, int, bool
             states_str[i] = "O"
         else:
             states_str[i] = "S*"
-    #print(f"0x{cache_data[0]:02x} {states_str[0]} | 0x{cache_data[1]:02x} {states_str[1]} | 0x{cache_data[2]:02x} {states_str[2]} | {hex(ram[1])} {hex(ram[0])}")
+    print(f"Cache {c_n + 1}: {op}")
+    print(f"0x{cache_data[0]:02x} {states_str[0]} | 0x{cache_data[1]:02x} {states_str[1]} | 0x{cache_data[2]:02x} {states_str[2]} | {hex(ram[1])} {hex(ram[0])}")
+    print(f"Ciclos usados: {cicles_used}")
+    
+    return cache_success, cicles_used, extra_op
+
+#Misma función que la anterior pero no existe el contador para el protocolo MESS*I. Es decir, si un procesador quiere hacer un reemplazo y tanto
+#él como otros procesadores tienen el mismo bloque en estado S*, todos deberán pasar S haciendo un BusWB.
+def process_instruction_no_counter(op: dict, c_n: int, proto: str) -> tuple[bool, int, bool]:
+    cache_success = False
+    cicles_used = 0
+    extra_op = False
+
+    if(op["op"] == 'r'):
+        if(op["dir"] == (cache_data[c_n] >> 4)):
+            if(states[c_n] > 0):
+                cache_success = True
+                cicles_used += 3
+            else:
+                cicles_used, data, state = BusRd(op, c_n, proto)
+                cache_data[c_n] = (op["dir"] << 4) | data
+                states[c_n] = state
+        else:
+            if(states[c_n] < 3):
+                cicles_used, data, state = BusRd(op, c_n, proto)
+                cache_data[c_n] = (op["dir"] << 4) | data
+                states[c_n] = state
+            elif(states[c_n] == 3):
+                cicles_used, state = BusWB(op, c_n, proto)
+                states[c_n] = state
+                extra_op = True
+            else:
+                cicles_used, state = BusWB_no_counter(op, c_n, proto)
+                states[c_n] = state
+                extra_op = True
+    else:
+        data = (random.randint(0, 15) & 0xf)
+        if(op["dir"] == (cache_data[c_n] >> 4)):
+            if(states[c_n] == 0):
+                cicles_used, state = BusRdX(op, c_n, proto)
+                cache_data[c_n] = (op["dir"] << 4) | data
+                states[c_n] = state
+            elif(states[c_n] == 1 or states[c_n] == 3):
+                cache_success = True
+                cicles_used = 3
+                cache_data[c_n] = (op["dir"] << 4) | data
+                states[c_n] = 3
+            else:
+                cache_success = True
+                cicles_used, state = BusUpgr(op, c_n, proto)
+                cache_data[c_n] = (op["dir"] << 4) | data
+                states[c_n] = state
+        else:
+            if(states[c_n] < 3):
+                cicles_used, state = BusRdX(op, c_n, proto)
+                cache_data[c_n] = (op["dir"] << 4) | data
+                states[c_n] = state
+            elif(states[c_n] == 3):
+                cicles_used, state = BusWB(op, c_n, proto)
+                states[c_n] = state
+                extra_op = True
+            else:
+                cicles_used, state = BusWB_no_counter(op, c_n, proto)
+                states[c_n] = state
+                extra_op = True
+
+    #DEBUG
+    states_str: list
+    states_str = ["", "", ""]
+    for i in range(3):
+        if(states[i] == 0):
+            states_str[i] = "I"
+        elif(states[i] == 1):
+            states_str[i] = "E"
+        elif(states[i] == 2):
+            states_str[i] = "S"
+        elif(states[i] == 3):
+            states_str[i] = "M"
+        elif(states[i] == 4 and proto == "moesi"):
+            states_str[i] = "O"
+        else:
+            states_str[i] = "S*"
+    print(f"Cache {c_n + 1}: {op}")
+    print(f"0x{cache_data[0]:02x} {states_str[0]} | 0x{cache_data[1]:02x} {states_str[1]} | 0x{cache_data[2]:02x} {states_str[2]} | {hex(ram[1])} {hex(ram[0])}")
+    print(f"Ciclos usados: {cicles_used}")
     
     return cache_success, cicles_used, extra_op
