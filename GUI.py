@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from typing import Optional
 import ficheros
-import sistema
+import nuevo_sistema as sistema
 
 canvas1: Optional[FigureCanvasTkAgg]
 canvas1 = None
@@ -13,17 +13,8 @@ canvas2 = None
 
 DEBUG = False       # Variable para activar ciertas instrucciones de depuración
 
-#def run_simulation():
-#    n_instr = int(entry_instr.get())
-#    proto = combo_proto.get()
-#    generate = var_generate.get()
-#
-#    cycles, success, fail = simulate(n_instr, proto, generate)
-#
-#
-#    label_cycles.config(text=f"Ciclos: {cycles}")
-#    label_success.config(text=f"Aciertos: {success}")
-#    label_fail.config(text=f"Fallos: {fail}")
+if(DEBUG):
+    sistema.DEBUG = True
 
 #def mostrar_resultados(resultados):
 #
@@ -136,6 +127,9 @@ def simulate(PROTO: str, counter: bool):
     for i in range(len(instr)):
         c_instr[i % 3].append(instr[i])
 
+    system = sistema.CoherenceSystem()
+    system.restart()
+
     i = 0
     cicles_used = 0
     total_success = 0
@@ -145,9 +139,11 @@ def simulate(PROTO: str, counter: bool):
         if(len(c_instr[i % 3]) > 0):
             # Se comprueba si el usuario marcó la opción de utilizar contadores en el protocolo MESS*I
             if(counter):
-                success, cycles, extra_op = sistema.process_instruction(c_instr[i % 3][0], i % 3, PROTO)
+                success, cycles, extra_op = system.process_instruction(c_instr[i % 3][0], i % 3, PROTO)
+                #success, cycles, extra_op = sistema.process_instruction(c_instr[i % 3][0], i % 3, PROTO)
             else:
-                success, cycles, extra_op = sistema.process_instruction_no_counter(c_instr[i % 3][0], i % 3, PROTO)
+                success, cycles, extra_op = system.process_instruction_no_counter(c_instr[i % 3][0], i % 3, PROTO)
+                #success, cycles, extra_op = sistema.process_instruction_no_counter(c_instr[i % 3][0], i % 3, PROTO)
             cicles_used += cycles
 
             if success:
@@ -160,7 +156,8 @@ def simulate(PROTO: str, counter: bool):
 
         i += 1
     
-    sistema.restart()
+    system.restart()
+    #sistema.restart()
 
     if(DEBUG):
         print(PROTO)
@@ -188,7 +185,7 @@ label_instructions.pack()
 
 # Casilla para marcar si se desea utilizar contadores con MESS*I
 var_counter = tk.BooleanVar()
-tk.Checkbutton(root, text="Añadir contadores en MESS*I", variable=var_counter, bg="#f3f3f3", highlightthickness=0, bd=0).pack()
+tk.Checkbutton(root, text="Añadir contadores en MESS*I", variable=var_counter, bg="#f3f3f3", highlightthickness=0, bd=0).pack()     # Los últimos parámetros son para quitar el marco
 
 # Botón para comenzar la simulación completa
 tk.Button(root, text="Ejecutar simulación", command=run_simulation_all).pack(pady=10)
@@ -197,7 +194,7 @@ tk.Button(root, text="Ejecutar simulación", command=run_simulation_all).pack(pa
 #label_results.pack()
 
 # Frame aparte para colocar las gráficas correctamente
-frame_graphics = tk.Frame(root, bg="#f3f3f3")  # gris suave
+frame_graphics = tk.Frame(root, bg="#f3f3f3")
 frame_graphics.pack(pady=10)
 
 # Para activar los eventos de la GUI (que permanezca activa)
