@@ -11,7 +11,8 @@ canvas1 = None
 canvas2: Optional[FigureCanvasTkAgg]
 canvas2 = None
 
-DEBUG = False       # Variable para activar ciertas instrucciones de depuración
+# Variable para activar ciertas instrucciones de depuración
+DEBUG = True
 
 if(DEBUG):
     sistema.DEBUG = True
@@ -38,6 +39,7 @@ def run_generation():
 # Hace una simulación completa con todos los protocolos, obtiene los resultado y llama a la función de generar gráficas
 def run_simulation_all():
     counter = var_counter.get()
+    WBComplete = var_WB.get()
 
     label_instructions.config(text=f"")
 
@@ -48,7 +50,7 @@ def run_simulation_all():
     success_graphics = []
 
     for proto in protocols:
-        cycles, success, fail = simulate(proto, counter)
+        cycles, success, fail = simulate(proto, counter, WBComplete)
         results[proto] = (cycles, success, fail)
         cycles_graphics.append(cycles)
         success_graphics.append(success / (success + fail) * 100)
@@ -118,7 +120,7 @@ def mostrar_graficas(protocols: list, cycles: list, success: list):
     canvas2.get_tk_widget().pack(side=tk.LEFT, padx=5)
 
 # Hace la simulación completa con uno de los protocolos utilizando las instrucciones leídas del fichero "instrucciones.txt"
-def simulate(PROTO: str, counter: bool):
+def simulate(PROTO: str, counter: bool, WBComplete: bool):
 
     instr = ficheros.read_instructions()
     c_instr: list
@@ -131,11 +133,12 @@ def simulate(PROTO: str, counter: bool):
     system.restart()
 
     i = 0
-    cicles_used = 0
+    cycles_used = 0
     total_success = 0
     total_fail = 0
 
     while (len(c_instr[0]) > 0 or len(c_instr[1]) > 0 or len(c_instr[2]) > 0):
+        extra_op = False
         if(len(c_instr[i % 3]) > 0):
             # Se comprueba si el usuario marcó la opción de utilizar contadores en el protocolo MESS*I
             if(counter):
@@ -144,25 +147,31 @@ def simulate(PROTO: str, counter: bool):
             else:
                 success, cycles, extra_op = system.process_instruction_no_counter(c_instr[i % 3][0], i % 3, PROTO)
                 #success, cycles, extra_op = sistema.process_instruction_no_counter(c_instr[i % 3][0], i % 3, PROTO)
-            cicles_used += cycles
+            cycles_used += cycles
 
-            if success:
-                total_success += 1
-            else:
-                total_fail += 1
+            if not extra_op:
+                if success:
+                    total_success += 1
+
+                    if(DEBUG):
+                        print("ACIERTO DE CACHÉ")
+                    
+                else:
+                    total_fail += 1
 
             if not extra_op:
                 c_instr[i % 3].pop(0)
-
-        i += 1
+        
+        if (not WBComplete or not extra_op):
+            i += 1
     
     system.restart()
     #sistema.restart()
 
     if(DEBUG):
-        print(PROTO)
+        print(PROTO, end="\n\n")
 
-    return cicles_used, total_success, total_fail
+    return cycles_used, total_success, total_fail
 
 # Creamos la GUI en sí
 root = tk.Tk()
@@ -186,6 +195,9 @@ label_instructions.pack()
 # Casilla para marcar si se desea utilizar contadores con MESS*I
 var_counter = tk.BooleanVar()
 tk.Checkbutton(root, text="Añadir contadores en MESS*I", variable=var_counter, bg="#f3f3f3", highlightthickness=0, bd=0).pack()     # Los últimos parámetros son para quitar el marco
+
+var_WB = tk.BooleanVar()
+tk.Checkbutton(root, text="Operaciones con WB completas", variable=var_WB, bg="#f3f3f3", highlightthickness=0, bd=0).pack()
 
 # Botón para comenzar la simulación completa
 tk.Button(root, text="Ejecutar simulación", command=run_simulation_all).pack(pady=10)
