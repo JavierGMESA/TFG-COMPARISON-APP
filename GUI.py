@@ -196,6 +196,7 @@ label_instructions.pack()
 var_counter = tk.BooleanVar()
 tk.Checkbutton(root, text="Añadir contadores en MESS*I", variable=var_counter, bg="#f3f3f3", highlightthickness=0, bd=0).pack()     # Los últimos parámetros son para quitar el marco
 
+# Casilla para marcar si se desea que las operaciones que conlleven WB se hagan de seguido
 var_WB = tk.BooleanVar()
 tk.Checkbutton(root, text="Operaciones con WB completas", variable=var_WB, bg="#f3f3f3", highlightthickness=0, bd=0).pack()
 
