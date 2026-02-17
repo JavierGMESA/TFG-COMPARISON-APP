@@ -12,21 +12,10 @@ canvas2: Optional[FigureCanvasTkAgg]
 canvas2 = None
 
 # Variable para activar ciertas instrucciones de depuración
-DEBUG = True
+DEBUG = False
 
 if(DEBUG):
     sistema.DEBUG = True
-
-#def mostrar_resultados(resultados):
-#
-#    texto = "PROTOCOLO | CICLOS | ACIERTOS | FALLOS\n"
-#    texto += "-"*45 + "\n"
-#
-#    for proto, valores in resultados.items():
-#        cycles, success, fail = valores
-#        texto += f"{proto.upper():9} | {cycles:6} | {success:8} | {fail:6}\n"
-#
-#    label_results.config(text=texto)
 
 
 
@@ -140,13 +129,7 @@ def simulate(PROTO: str, counter: bool, WBComplete: bool):
     while (len(c_instr[0]) > 0 or len(c_instr[1]) > 0 or len(c_instr[2]) > 0):
         extra_op = False
         if(len(c_instr[i % 3]) > 0):
-            # Se comprueba si el usuario marcó la opción de utilizar contadores en el protocolo MESS*I
-            if(counter):
-                success, cycles, extra_op = system.process_instruction(c_instr[i % 3][0], i % 3, PROTO)
-                #success, cycles, extra_op = sistema.process_instruction(c_instr[i % 3][0], i % 3, PROTO)
-            else:
-                success, cycles, extra_op = system.process_instruction_no_counter(c_instr[i % 3][0], i % 3, PROTO)
-                #success, cycles, extra_op = sistema.process_instruction_no_counter(c_instr[i % 3][0], i % 3, PROTO)
+            success, cycles, extra_op = system.process_instruction(c_instr[i % 3][0], i % 3, PROTO, counter)
             cycles_used += cycles
 
             if not extra_op:
@@ -162,6 +145,8 @@ def simulate(PROTO: str, counter: bool, WBComplete: bool):
             if not extra_op:
                 c_instr[i % 3].pop(0)
         
+        # Si se desea que las instrucciones que provoquen WB se hagan de seguido y efectivamente ocurre un WB
+        # no se incrementa el iterador para realizar la instrucción completa.
         if (not WBComplete or not extra_op):
             i += 1
     

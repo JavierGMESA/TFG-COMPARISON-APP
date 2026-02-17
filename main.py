@@ -1,5 +1,5 @@
 import ficheros
-import sistema
+import antiguo_sistema
 
 N_INSTR = 18
 PROTO = "moesi"
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     while (len(c_instr[0]) > 0 or len(c_instr[1]) > 0 or len(c_instr[2]) > 0):
         if(len(c_instr[i % 3]) > 0):
             print(f"{(i % 3) + 1}: {c_instr[i % 3][0]}")
-            success, cicles, extra_op = sistema.process_instruction(c_instr[i % 3][0], i % 3, PROTO)
+            success, cicles, extra_op = antiguo_sistema.process_instruction(c_instr[i % 3][0], i % 3, PROTO)
             cicles_used += cicles
             if(success):
                 total_success += 1
